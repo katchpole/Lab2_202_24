@@ -27,6 +27,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
 
     private LineGraphView lineGraphView;
+    private LineGraphView lineGraphView2;
 
     double[][] accelArray = new double[100][3];     //csv file array
 
@@ -59,7 +60,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         layout.addView(lineGraphView);
         lineGraphView.setVisibility(View.VISIBLE);
 
-        accelerationHandler = new AccelerationHandler(getApplicationContext(), layout, "acceleration", lineGraphView);
+        lineGraphView2 = new LineGraphView(getApplicationContext(), 100, Arrays.asList("x", "y", "z"));
+        lineGraphView2.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        layout.addView(lineGraphView2);
+        lineGraphView2.setVisibility(View.VISIBLE);
+
+        accelerationHandler = new AccelerationHandler(getApplicationContext(), layout, "acceleration", lineGraphView, lineGraphView2);
 
 
         //BUTTONS

@@ -139,7 +139,8 @@ public class LineGraphView extends View
 		}
 		
 		xScale = WIDTH / (points.size()+1);
-		yScale = (HEIGHT / 2) / maxY;
+		//yScale = (HEIGHT / 2) / maxY;
+		yScale = (HEIGHT);
 		
 		canvas.drawText(Float.toString(maxY) + " m/s^2", 0, 10, graphPaint);
 		canvas.drawText("-" + Float.toString(maxY) + " m/s^2", 0, HEIGHT, graphPaint);
