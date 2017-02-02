@@ -49,9 +49,9 @@ public class AccelerationHandler extends SensorHandler {
         v = ProcessData(v);
         mLineGraphView.addPoint(v);
 
-        for (int p = 0; p < 99; ++p){
-            for (int k = 0; k < 3; k++){
-                accelArray[p+1][k] = accelArray[p][k];
+        for (int i = 1; i < 100; ++i){
+            for (int j = 0; j < 3; ++j){
+                accelArray[i-1][j] = accelArray[i][j];
             }
         }
         for(int i = 0; i<3; i++) {
