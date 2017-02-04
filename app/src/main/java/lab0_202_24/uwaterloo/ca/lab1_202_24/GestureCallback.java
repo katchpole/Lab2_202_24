@@ -5,6 +5,6 @@ package lab0_202_24.uwaterloo.ca.lab1_202_24;
  */
 
 public interface GestureCallback {
-    public static enum Direction{LEFT, RIGHT, UP, DOWN};
-    public void onGestureDetect(Direction direction);
+    enum Direction{LEFT, RIGHT, UP, DOWN};
+    void onGestureDetect(Direction direction);
 }

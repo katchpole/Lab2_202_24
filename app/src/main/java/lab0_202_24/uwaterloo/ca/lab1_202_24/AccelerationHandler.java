@@ -2,30 +2,27 @@ package lab0_202_24.uwaterloo.ca.lab1_202_24;
 
 import android.content.Context;
 import android.widget.LinearLayout;
-import android.widget.TextView;
-
-import java.util.Locale;
 
 /**
  * Created by patri on 2017-01-18.
  */
 
 public class AccelerationHandler extends SensorHandler {
-    enum GestureState{UNDEFINED, RIGHT_PEAK, LEFT_PEAK, LEFT_FALL, RIGHT_FALL, UP_PEAK, UP_FALL, DOWN_PEAK, DOWN_FALL};
-    GestureState CurrentState = GestureState.UNDEFINED;
-    int GestureTimeout = 0;
 
-    float[] gravity = new float[3];
-    private final float C = 12.0f;
-    LineGraphView mLineGraphView;
-    LineGraphView mLineGraphView2;
-    double[][] accelArray = new double[100][3];
-    GestureCallback mGestureCallback;
+    private enum GestureState{UNDEFINED, RIGHT_PEAK, LEFT_PEAK, LEFT_FALL, RIGHT_FALL, UP_PEAK, UP_FALL, DOWN_PEAK, DOWN_FALL};
+    private GestureState CurrentState = GestureState.UNDEFINED;
+    private int GestureTimeout = 0;
 
-    AccelerationHandler(Context applicationContext, LinearLayout layout, String sensorType, LineGraphView lineGraphView, LineGraphView lineGraphView2, GestureCallback gestureCallback){
+    private float[] gravity = new float[3];
+    private final float FILTER_RATE = 12.0f;
+    private LineGraphView preFilterLGV, postFilterLGV;
+    private double[][] accelArray = new double[100][3];
+    private GestureCallback mGestureCallback;
+
+    AccelerationHandler(Context applicationContext, LinearLayout layout, String sensorType, LineGraphView preFilterLGV, LineGraphView postFilterLGV, GestureCallback gestureCallback){
         super(applicationContext, layout, sensorType);
-        mLineGraphView = lineGraphView;
-        mLineGraphView2 = lineGraphView2;
+        this.preFilterLGV = preFilterLGV;
+        this.postFilterLGV = postFilterLGV;
         mGestureCallback = gestureCallback;
     }
 
@@ -53,7 +50,7 @@ public class AccelerationHandler extends SensorHandler {
     public void HandleOutput(float[] v, int maxLen) {
         super.HandleOutput(v, maxLen);
         v = ProcessData(v);
-        mLineGraphView.addPoint(v);
+        preFilterLGV.addPoint(v);
 
         for (int i = 1; i < 100; ++i){
             for (int j = 0; j < 3; ++j){
@@ -61,19 +58,30 @@ public class AccelerationHandler extends SensorHandler {
             }
         }
         for(int i = 0; i<3; i++) {
-            accelArray[99][i] += (v[i] - accelArray[99][i])/C;
+            accelArray[99][i] += (v[i] - accelArray[99][i])/ FILTER_RATE;
             v[i] = (float) accelArray[99][i];
         }
-        mLineGraphView2.addPoint(v);
+        postFilterLGV.addPoint(v);
         GestureDetect();
     }
 
-    public void GestureDetect(){
+    private void GestureDetect(){
+
         /*
         * Threshold Data
-        * EDGE A THRESH -> SET STATE "PEAK"
+        * EDGE A PEAK THRESH -> SET STATE "PEAK"
         * EDGE B REBOUND THRESH -> SET STATE "FALL"
-        * */
+        */
+
+        /*
+        Ex.
+             ---
+            -   - <- Peak Thresh     --Neutral--
+        ----     -          ---------------
+                   -       -
+            Rebound->-   -
+                       -
+        */
         double[] CurrentValues = accelArray[99];
         double[] RIGHT_THRESH = {1.0, -1.0};
         double[] LEFT_THRESH = {-1.0, 1.0};
@@ -81,6 +89,7 @@ public class AccelerationHandler extends SensorHandler {
         double[] DOWN_THRESH = LEFT_THRESH;
         
         switch (CurrentState){
+            //Detect initial thresholds when in undefined state
             case UNDEFINED:
                 if (CurrentValues[1] > UP_THRESH[0]) {
                     CurrentState = GestureState.UP_PEAK;
@@ -93,20 +102,34 @@ public class AccelerationHandler extends SensorHandler {
                 }
                 GestureTimeout = 0;
                 break;
+            //When detected peak, check for negative rebound of signal
             case RIGHT_PEAK:
                 if (CurrentValues[0] < RIGHT_THRESH[1]){
                     CurrentState = GestureState.RIGHT_FALL;
                 }
                 break;
+            case LEFT_PEAK:
+                if (CurrentValues[0] > LEFT_THRESH[1]){
+                    CurrentState = GestureState.LEFT_FALL;
+                }
+                break;
+            case UP_PEAK:
+                if (CurrentValues[1] < UP_THRESH[1]){
+                    CurrentState = GestureState.UP_FALL;
+                }
+                break;
+            case DOWN_PEAK:
+                if (CurrentValues[1] > DOWN_THRESH[1]){
+                    CurrentState = GestureState.DOWN_FALL;
+                }
+                break;
+            //When in rebound state look for back to less than rebound state
+            //When the state completes, send a callback to the passed GestureCallback for further handling
+            //Resets to undefined state
             case RIGHT_FALL:
                 if (CurrentValues[0] > RIGHT_THRESH[1]){
                     mGestureCallback.onGestureDetect(GestureCallback.Direction.RIGHT);
                     CurrentState = GestureState.UNDEFINED;
-                }
-                break;
-            case LEFT_PEAK:
-                if (CurrentValues[0] > LEFT_THRESH[1]){
-                    CurrentState = GestureState.LEFT_FALL;
                 }
                 break;
             case LEFT_FALL:
@@ -115,22 +138,13 @@ public class AccelerationHandler extends SensorHandler {
                     CurrentState = GestureState.UNDEFINED;
                 }
                 break;
-            case UP_PEAK:
-                if (CurrentValues[1] < UP_THRESH[1]){
-                    CurrentState = GestureState.UP_FALL;
-                }
-                break;
             case UP_FALL:
                 if (CurrentValues[1] > UP_THRESH[1]){
                     mGestureCallback.onGestureDetect(GestureCallback.Direction.UP);
                     CurrentState = GestureState.UNDEFINED;
                 }
                 break;
-            case DOWN_PEAK:
-                if (CurrentValues[1] > DOWN_THRESH[1]){
-                    CurrentState = GestureState.DOWN_FALL;
-                }
-                break;
+
             case DOWN_FALL:
                 if (CurrentValues[1] < DOWN_THRESH[1]){
                     mGestureCallback.onGestureDetect(GestureCallback.Direction.DOWN);
@@ -139,6 +153,7 @@ public class AccelerationHandler extends SensorHandler {
                 break;
         }
 
+        //The system timesout and resets if in a non-undefined state for more than 30 cycles
         if (GestureTimeout++ > 30){
             CurrentState = GestureState.UNDEFINED;
         }
