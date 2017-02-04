@@ -11,16 +11,22 @@ import java.util.Locale;
  */
 
 public class AccelerationHandler extends SensorHandler {
+    enum GestureState{UNDEFINED, RIGHT_PEAK, LEFT_PEAK, LEFT_FALL, RIGHT_FALL, UP_PEAK, UP_FALL, DOWN_PEAK, DOWN_FALL};
+    GestureState CurrentState = GestureState.UNDEFINED;
+    int GestureTimeout = 0;
 
     float[] gravity = new float[3];
     private final float C = 12.0f;
     LineGraphView mLineGraphView;
     LineGraphView mLineGraphView2;
     double[][] accelArray = new double[100][3];
-    AccelerationHandler(Context applicationContext, LinearLayout layout, String sensorType, LineGraphView lineGraphView, LineGraphView lineGraphView2){
+    GestureCallback mGestureCallback;
+
+    AccelerationHandler(Context applicationContext, LinearLayout layout, String sensorType, LineGraphView lineGraphView, LineGraphView lineGraphView2, GestureCallback gestureCallback){
         super(applicationContext, layout, sensorType);
         mLineGraphView = lineGraphView;
         mLineGraphView2 = lineGraphView2;
+        mGestureCallback = gestureCallback;
     }
 
     @Override
@@ -58,8 +64,84 @@ public class AccelerationHandler extends SensorHandler {
             accelArray[99][i] += (v[i] - accelArray[99][i])/C;
             v[i] = (float) accelArray[99][i];
         }
-
         mLineGraphView2.addPoint(v);
+        GestureDetect();
+    }
+
+    public void GestureDetect(){
+        /*
+        * Threshold Data
+        * EDGE A THRESH -> SET STATE "PEAK"
+        * EDGE B REBOUND THRESH -> SET STATE "FALL"
+        * */
+        double[] CurrentValues = accelArray[99];
+        double[] RIGHT_THRESH = {1.0, -1.0};
+        double[] LEFT_THRESH = {-1.0, 1.0};
+        double[] UP_THRESH = RIGHT_THRESH;
+        double[] DOWN_THRESH = LEFT_THRESH;
+        
+        switch (CurrentState){
+            case UNDEFINED:
+                if (CurrentValues[1] > UP_THRESH[0]) {
+                    CurrentState = GestureState.UP_PEAK;
+                }else if (CurrentValues[1] < DOWN_THRESH[0]){
+                    CurrentState = GestureState.DOWN_PEAK;
+                }else if (CurrentValues[0] > RIGHT_THRESH[0]){
+                    CurrentState = GestureState.RIGHT_PEAK;
+                }else if (CurrentValues[0] < LEFT_THRESH[0]){
+                    CurrentState = GestureState.LEFT_PEAK;
+                }
+                GestureTimeout = 0;
+                break;
+            case RIGHT_PEAK:
+                if (CurrentValues[0] < RIGHT_THRESH[1]){
+                    CurrentState = GestureState.RIGHT_FALL;
+                }
+                break;
+            case RIGHT_FALL:
+                if (CurrentValues[0] > RIGHT_THRESH[1]){
+                    mGestureCallback.onGestureDetect(GestureCallback.Direction.RIGHT);
+                    CurrentState = GestureState.UNDEFINED;
+                }
+                break;
+            case LEFT_PEAK:
+                if (CurrentValues[0] > LEFT_THRESH[1]){
+                    CurrentState = GestureState.LEFT_FALL;
+                }
+                break;
+            case LEFT_FALL:
+                if (CurrentValues[0] < LEFT_THRESH[1]){
+                    mGestureCallback.onGestureDetect(GestureCallback.Direction.LEFT);
+                    CurrentState = GestureState.UNDEFINED;
+                }
+                break;
+            case UP_PEAK:
+                if (CurrentValues[1] < UP_THRESH[1]){
+                    CurrentState = GestureState.UP_FALL;
+                }
+                break;
+            case UP_FALL:
+                if (CurrentValues[1] > UP_THRESH[1]){
+                    mGestureCallback.onGestureDetect(GestureCallback.Direction.UP);
+                    CurrentState = GestureState.UNDEFINED;
+                }
+                break;
+            case DOWN_PEAK:
+                if (CurrentValues[1] > DOWN_THRESH[1]){
+                    CurrentState = GestureState.DOWN_FALL;
+                }
+                break;
+            case DOWN_FALL:
+                if (CurrentValues[1] < DOWN_THRESH[1]){
+                    mGestureCallback.onGestureDetect(GestureCallback.Direction.DOWN);
+                    CurrentState = GestureState.UNDEFINED;
+                }
+                break;
+        }
+
+        if (GestureTimeout++ > 30){
+            CurrentState = GestureState.UNDEFINED;
+        }
     }
 
     public double[][] GetAccelArray(){

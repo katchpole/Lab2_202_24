@@ -2,6 +2,7 @@ package lab0_202_24.uwaterloo.ca.lab1_202_24;
 
 import android.app.ActionBar;
 import android.content.Context;
+import android.graphics.Color;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -9,6 +10,7 @@ import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -22,13 +24,11 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-public class MainActivity extends AppCompatActivity implements SensorEventListener {
-
-
+public class MainActivity extends AppCompatActivity implements SensorEventListener, GestureCallback{
 
     private LineGraphView lineGraphView;
     private LineGraphView lineGraphView2;
-
+    private TextView textViewGestureStatus;
     double[][] accelArray = new double[100][3];     //csv file array
 
 
@@ -65,8 +65,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         layout.addView(lineGraphView2);
         lineGraphView2.setVisibility(View.VISIBLE);
 
-        accelerationHandler = new AccelerationHandler(getApplicationContext(), layout, "acceleration", lineGraphView, lineGraphView2);
+        accelerationHandler = new AccelerationHandler(getApplicationContext(), layout, "acceleration", lineGraphView, lineGraphView2, this);
 
+        textViewGestureStatus = new TextView(getApplicationContext());
+        textViewGestureStatus.setGravity(Gravity.CENTER_HORIZONTAL);
+        textViewGestureStatus.setTextSize(26);
+        textViewGestureStatus.setTextColor(Color.WHITE);
+        layout.addView(textViewGestureStatus);
 
         //BUTTONS
         Button resetButton = new Button(getApplicationContext());
@@ -91,10 +96,20 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         });
 
-
-
     }
 
+    @Override
+    public void onGestureDetect(Direction direction){
+        if (direction == Direction.RIGHT){
+            textViewGestureStatus.setText("RIGHT");
+        }else if (direction == Direction.LEFT){
+            textViewGestureStatus.setText("LEFT");
+        }else if (direction == Direction.UP){
+            textViewGestureStatus.setText("UP");
+        }else if (direction == Direction.DOWN){
+            textViewGestureStatus.setText("DOWN");
+        }
+    }
 
 
     @Override
@@ -116,18 +131,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     @Override
     public void onSensorChanged(SensorEvent event){
-
-
-
         //changes in accelerometer
         if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER){
             accelerationHandler.HandleOutput(event.values);
             accelArray = accelerationHandler.GetAccelArray();
-
-
         }
-
-
     }
 
     public void fileWrite(){
