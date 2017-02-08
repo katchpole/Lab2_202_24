@@ -33,7 +33,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
 
     private SensorManager mSensorManager;
-
     private Sensor mAccelerometer;
 
 
@@ -48,12 +47,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 
-
-
         //reference linear layout
         LinearLayout layout = (LinearLayout)findViewById(R.id.lin_layout);
         layout.setOrientation(LinearLayout.VERTICAL);
-
 
         lineGraphView = new LineGraphView(getApplicationContext(), 100, Arrays.asList("x", "y", "z"));
         lineGraphView.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
@@ -71,6 +67,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         textViewGestureStatus.setGravity(Gravity.CENTER_HORIZONTAL);
         textViewGestureStatus.setTextSize(26);
         textViewGestureStatus.setTextColor(Color.WHITE);
+        textViewGestureStatus.setText("WAITING FOR INPUT...");
         layout.addView(textViewGestureStatus);
 
         //BUTTONS
@@ -163,9 +160,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     public  void resetMax(){
         accelerationHandler.Reset();
-
-
-
     }
 
 }
